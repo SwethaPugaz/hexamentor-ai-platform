@@ -62,6 +62,38 @@ const Results = () => {
   const [skillAnalysis, setSkillAnalysis] = useState<SkillAnalysis[]>([]);
   const [competencyMetrics, setCompetencyMetrics] = useState<CompetencyMetric[]>([]);
 
+  // Exit fullscreen and cleanup camera when entering results page
+  useEffect(() => {
+    const cleanupSecurity = async () => {
+      // Exit fullscreen if still active
+      if (document.fullscreenElement) {
+        try {
+          await document.exitFullscreen();
+          toast.success('Assessment completed - Exited secure mode');
+        } catch (error) {
+          console.log('Fullscreen exit handled');
+        }
+      }
+
+      // Stop any camera streams
+      const streams = await navigator.mediaDevices.enumerateDevices();
+      streams.forEach(device => {
+        if (device.kind === 'videoinput') {
+          // Stop any active video tracks
+          navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+              stream.getTracks().forEach(track => track.stop());
+            })
+            .catch(() => {
+              // Camera might not be active, ignore error
+            });
+        }
+      });
+    };
+
+    cleanupSecurity();
+  }, []);
+
   useEffect(() => {
     const generateResults = async () => {
       setLoading(true);

@@ -105,8 +105,9 @@ const Assessment = () => {
     const generateQuestions = async () => {
       setIsLoading(true);
       
-      // Simulate AI-generated adaptive questions
-      const mockQuestions: Question[] = [
+      // Comprehensive question bank with 15+ questions based on job roles
+      const allQuestions: Question[] = [
+        // Core Programming Questions
         {
           id: 1,
           question: "What is the primary purpose of React hooks?",
@@ -149,11 +150,217 @@ const Assessment = () => {
           category: 'Data Science',
           concept: 'Machine Learning'
         },
-        // Add more questions based on user's selected job roles
-        ...generateAdaptiveQuestions(user?.jobRoles || [])
+        {
+          id: 4,
+          question: "What is the difference between let and var in JavaScript?",
+          options: [
+            "No difference",
+            "let has block scope, var has function scope",
+            "var is newer than let",
+            "let is only for numbers"
+          ],
+          correctAnswer: 1,
+          difficulty: 'easy',
+          category: 'Frontend Development',
+          concept: 'JavaScript Fundamentals'
+        },
+        {
+          id: 5,
+          question: "Which HTTP status code indicates a successful request?",
+          options: [
+            "404",
+            "500",
+            "200",
+            "301"
+          ],
+          correctAnswer: 2,
+          difficulty: 'easy',
+          category: 'Backend Development',
+          concept: 'HTTP Protocol'
+        },
+        {
+          id: 6,
+          question: "What is the purpose of database indexing?",
+          options: [
+            "To store more data",
+            "To improve query performance",
+            "To backup data",
+            "To encrypt data"
+          ],
+          correctAnswer: 1,
+          difficulty: 'medium',
+          category: 'Database Management',
+          concept: 'Database Optimization'
+        },
+        {
+          id: 7,
+          question: "In object-oriented programming, what is polymorphism?",
+          options: [
+            "Having multiple constructors",
+            "The ability of different objects to respond to the same method call",
+            "Creating multiple objects",
+            "Inheriting from multiple classes"
+          ],
+          correctAnswer: 1,
+          difficulty: 'medium',
+          category: 'Software Engineering',
+          concept: 'OOP Concepts'
+        },
+        {
+          id: 8,
+          question: "What is the Big O notation for binary search?",
+          options: [
+            "O(n)",
+            "O(log n)",
+            "O(n²)",
+            "O(1)"
+          ],
+          correctAnswer: 1,
+          difficulty: 'medium',
+          category: 'Algorithms',
+          concept: 'Search Algorithms'
+        },
+        {
+          id: 9,
+          question: "Which CSS property is used for creating flexible layouts?",
+          options: [
+            "display: block",
+            "display: flex",
+            "display: inline",
+            "display: none"
+          ],
+          correctAnswer: 1,
+          difficulty: 'easy',
+          category: 'Frontend Development',
+          concept: 'CSS Flexbox'
+        },
+        {
+          id: 10,
+          question: "What is the purpose of version control systems like Git?",
+          options: [
+            "To compile code",
+            "To track changes and collaborate on code",
+            "To run tests",
+            "To deploy applications"
+          ],
+          correctAnswer: 1,
+          difficulty: 'easy',
+          category: 'Software Engineering',
+          concept: 'Version Control'
+        },
+        {
+          id: 11,
+          question: "In REST APIs, what does POST method typically do?",
+          options: [
+            "Retrieve data",
+            "Delete data",
+            "Create new data",
+            "Update existing data"
+          ],
+          correctAnswer: 2,
+          difficulty: 'easy',
+          category: 'Backend Development',
+          concept: 'REST API'
+        },
+        {
+          id: 12,
+          question: "What is the purpose of cross-validation in machine learning?",
+          options: [
+            "To increase model complexity",
+            "To assess model performance and prevent overfitting",
+            "To reduce training time",
+            "To increase dataset size"
+          ],
+          correctAnswer: 1,
+          difficulty: 'hard',
+          category: 'Data Science',
+          concept: 'Model Validation'
+        },
+        {
+          id: 13,
+          question: "Which data structure follows Last-In-First-Out (LIFO) principle?",
+          options: [
+            "Queue",
+            "Stack",
+            "Array",
+            "Linked List"
+          ],
+          correctAnswer: 1,
+          difficulty: 'easy',
+          category: 'Data Structures',
+          concept: 'Stack Operations'
+        },
+        {
+          id: 14,
+          question: "What is the main advantage of using a CDN (Content Delivery Network)?",
+          options: [
+            "Better security",
+            "Faster content delivery to users",
+            "More storage space",
+            "Easier development"
+          ],
+          correctAnswer: 1,
+          difficulty: 'medium',
+          category: 'Web Development',
+          concept: 'Performance Optimization'
+        },
+        {
+          id: 15,
+          question: "In SQL, which clause is used to filter results?",
+          options: [
+            "SELECT",
+            "FROM",
+            "WHERE",
+            "ORDER BY"
+          ],
+          correctAnswer: 2,
+          difficulty: 'easy',
+          category: 'Database Management',
+          concept: 'SQL Queries'
+        }
       ];
+
+      // Filter questions based on user's job roles or return all 15
+      let selectedQuestions = allQuestions;
       
-      setQuestions(mockQuestions);
+      if (user?.jobRoles && user.jobRoles.length > 0) {
+        const roleCategories = new Set<string>();
+        
+        user.jobRoles.forEach(role => {
+          if (role.toLowerCase().includes('frontend') || role.toLowerCase().includes('react')) {
+            roleCategories.add('Frontend Development');
+            roleCategories.add('Web Development');
+          }
+          if (role.toLowerCase().includes('backend') || role.toLowerCase().includes('api')) {
+            roleCategories.add('Backend Development');
+          }
+          if (role.toLowerCase().includes('data') || role.toLowerCase().includes('ml')) {
+            roleCategories.add('Data Science');
+          }
+          if (role.toLowerCase().includes('full') || role.toLowerCase().includes('engineer')) {
+            roleCategories.add('Software Engineering');
+            roleCategories.add('Algorithms');
+            roleCategories.add('Data Structures');
+          }
+          if (role.toLowerCase().includes('database') || role.toLowerCase().includes('sql')) {
+            roleCategories.add('Database Management');
+          }
+        });
+
+        // If specific roles are selected, prioritize those questions
+        if (roleCategories.size > 0) {
+          const priorityQuestions = allQuestions.filter(q => roleCategories.has(q.category));
+          const otherQuestions = allQuestions.filter(q => !roleCategories.has(q.category));
+          
+          // Take priority questions first, then fill with others to reach 15
+          selectedQuestions = [
+            ...priorityQuestions,
+            ...otherQuestions.slice(0, Math.max(0, 15 - priorityQuestions.length))
+          ].slice(0, 15);
+        }
+      }
+
+      setQuestions(selectedQuestions);
       setIsLoading(false);
     };
 
@@ -165,13 +372,90 @@ const Assessment = () => {
   const handleSubmitAssessment = useCallback(async () => {
     setIsSubmitting(true);
     
+    // Calculate assessment results
+    const totalQuestions = questions.length;
+    let correctAnswers = 0;
+    const categoryScores: { [key: string]: { correct: number; total: number } } = {};
+    const skillGaps: Array<{ skill: string; score: number; needsImprovement: boolean; topics: string[] }> = [];
+
+    // Calculate scores by category
+    questions.forEach(question => {
+      const userAnswer = answers[question.id];
+      const isCorrect = userAnswer && parseInt(userAnswer) === question.correctAnswer;
+      
+      if (isCorrect) correctAnswers++;
+
+      // Track category performance
+      if (!categoryScores[question.category]) {
+        categoryScores[question.category] = { correct: 0, total: 0 };
+      }
+      categoryScores[question.category].total++;
+      if (isCorrect) {
+        categoryScores[question.category].correct++;
+      }
+    });
+
+    // Calculate overall score
+    const overallScore = Math.round((correctAnswers / totalQuestions) * 100);
+
+    // Identify skill gaps (categories with < 70% score)
+    Object.entries(categoryScores).forEach(([category, score]) => {
+      const categoryPercentage = Math.round((score.correct / score.total) * 100);
+      const needsImprovement = categoryPercentage < 70;
+      
+      // Get topics that need improvement in this category
+      const weakTopics = questions
+        .filter(q => q.category === category)
+        .filter(q => {
+          const userAnswer = answers[q.id];
+          return !userAnswer || parseInt(userAnswer) !== q.correctAnswer;
+        })
+        .map(q => q.concept);
+
+      skillGaps.push({
+        skill: category,
+        score: categoryPercentage,
+        needsImprovement,
+        topics: [...new Set(weakTopics)] // Remove duplicates
+      });
+    });
+
+    // Store results in assessment store
+    const assessmentResults = {
+      totalQuestions,
+      correctAnswers,
+      overallScore,
+      categoryScores: Object.entries(categoryScores).map(([category, score]) => ({
+        category,
+        score: Math.round((score.correct / score.total) * 100),
+        correct: score.correct,
+        total: score.total
+      })),
+      skillGaps: skillGaps.filter(gap => gap.needsImprovement),
+      completedAt: new Date().toISOString(),
+      timeSpent: 45 * 60 - timeLeft // Time spent in seconds
+    };
+
     // Simulate AI analysis
     await new Promise(resolve => setTimeout(resolve, 2000));
     
+    // Save results to store
     completeAssessment();
-    toast.success('Assessment completed successfully!');
+    
+    // Show score notification
+    if (overallScore >= 80) {
+      toast.success(`Excellent! You scored ${overallScore}%`);
+    } else if (overallScore >= 60) {
+      toast.success(`Good job! You scored ${overallScore}%`);
+    } else {
+      toast.error(`You scored ${overallScore}%. Keep practicing!`);
+    }
+
+    // Store detailed results for Results page
+    localStorage.setItem('assessmentResults', JSON.stringify(assessmentResults));
+    
     navigate('/results');
-  }, [completeAssessment, navigate]);
+  }, [completeAssessment, navigate, questions, answers, timeLeft]);
 
   // Timer countdown - only runs when security is verified
   useEffect(() => {
@@ -189,43 +473,6 @@ const Assessment = () => {
 
     return () => clearInterval(timer);
   }, [securityVerified, handleSubmitAssessment]);
-
-  const generateAdaptiveQuestions = (jobRoles: string[]): Question[] => {
-    const additionalQuestions: Question[] = [];
-    
-    jobRoles.forEach(role => {
-      if (role.includes('Frontend')) {
-        additionalQuestions.push({
-          id: Date.now() + Math.random(),
-          question: "Which CSS property is used for creating flexible layouts?",
-          options: ["display: block", "display: flex", "display: inline", "display: none"],
-          correctAnswer: 1,
-          difficulty: 'easy',
-          category: 'Frontend Development',
-          concept: 'CSS Flexbox'
-        });
-      }
-      
-      if (role.includes('Data Scientist')) {
-        additionalQuestions.push({
-          id: Date.now() + Math.random(),
-          question: "What is the purpose of cross-validation in machine learning?",
-          options: [
-            "To increase model complexity",
-            "To assess model performance and prevent overfitting",
-            "To reduce training time",
-            "To increase dataset size"
-          ],
-          correctAnswer: 1,
-          difficulty: 'hard',
-          category: 'Data Science',
-          concept: 'Model Validation'
-        });
-      }
-    });
-    
-    return additionalQuestions;
-  };
 
   const handleAnswerSelect = (answerIndex: number) => {
     setSelectedAnswer(answerIndex);
