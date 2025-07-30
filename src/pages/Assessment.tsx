@@ -34,7 +34,8 @@ const Assessment = () => {
     setAnswer, 
     answers, 
     completeAssessment,
-    resetAssessment
+    resetAssessment,
+    setResults
   } = useAssessmentStore();
   const navigate = useNavigate();
   
@@ -422,9 +423,9 @@ const Assessment = () => {
 
     // Store results in assessment store
     const assessmentResults = {
+      score: overallScore, // Add the missing score property
       totalQuestions,
       correctAnswers,
-      overallScore,
       categoryScores: Object.entries(categoryScores).map(([category, score]) => ({
         category,
         score: Math.round((score.correct / score.total) * 100),
@@ -433,13 +434,14 @@ const Assessment = () => {
       })),
       skillGaps: skillGaps.filter(gap => gap.needsImprovement),
       completedAt: new Date().toISOString(),
-      timeSpent: 45 * 60 - timeLeft // Time spent in seconds
+      timeSpent: Math.round((45 * 60 - timeLeft) / 60) // Time spent in minutes
     };
 
     // Simulate AI analysis
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Save results to store
+    setResults(assessmentResults);
     completeAssessment();
     
     // Show score notification
@@ -455,7 +457,7 @@ const Assessment = () => {
     localStorage.setItem('assessmentResults', JSON.stringify(assessmentResults));
     
     navigate('/results');
-  }, [completeAssessment, navigate, questions, answers, timeLeft]);
+  }, [completeAssessment, navigate, questions, answers, timeLeft, setResults]);
 
   // Timer countdown - only runs when security is verified
   useEffect(() => {

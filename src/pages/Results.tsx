@@ -26,6 +26,7 @@ import {
   Tooltip, 
   ResponsiveContainer,
   PieChart as RechartsPieChart,
+  Pie,
   Cell,
   RadarChart,
   PolarGrid,
@@ -56,8 +57,7 @@ interface CompetencyMetric {
 }
 
 const Results = () => {
-  const { user } = useAuthStore();
-  const { results, isCompleted, setResults, setSkillGaps } = useAssessmentStore();
+  const { detailedResults, isCompleted, setResults, setSkillGaps } = useAssessmentStore();
   const [loading, setLoading] = useState(true);
   const [skillAnalysis, setSkillAnalysis] = useState<SkillAnalysis[]>([]);
   const [competencyMetrics, setCompetencyMetrics] = useState<CompetencyMetric[]>([]);
@@ -282,14 +282,45 @@ const Results = () => {
                   <div className="text-sm opacity-90">Overall Score</div>
                 </div>
                 <div className="text-center">
+                  <div className="text-3xl font-bold">{detailedResults?.correctAnswers || 0}/{detailedResults?.totalQuestions || 15}</div>
+                  <div className="text-sm opacity-90">Questions Correct</div>
+                </div>
+                <div className="text-center">
                   <div className="text-3xl font-bold">{skillAnalysis.filter(s => s.gap > 10).length}</div>
                   <div className="text-sm opacity-90">Skill Gaps</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold">{competencyMetrics.filter(m => m.level === 'Advanced').length}</div>
-                  <div className="text-sm opacity-90">Advanced Skills</div>
+                  <div className="text-3xl font-bold">{competencyMetrics.filter(m => m.level === 'Advanced' || m.level === 'Expert').length}</div>
+                  <div className="text-sm opacity-90">Strong Areas</div>
                 </div>
               </div>
+
+              {/* Assessment Summary */}
+              {detailedResults && (
+                <div className="mt-8 bg-white/20 backdrop-blur-sm rounded-xl p-6">
+                  <h3 className="text-xl font-bold mb-4">Assessment Summary</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                    <div>
+                      <div className="text-2xl font-bold">{detailedResults.timeSpent || 'N/A'}</div>
+                      <div className="text-sm opacity-90">Minutes Taken</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold">{detailedResults.totalQuestions || 15}</div>
+                      <div className="text-sm opacity-90">Total Questions</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold">{detailedResults.correctAnswers || 0}</div>
+                      <div className="text-sm opacity-90">Correct Answers</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold">
+                        {detailedResults.totalQuestions ? Math.round(((detailedResults.totalQuestions - detailedResults.correctAnswers) / detailedResults.totalQuestions) * 100) : 0}%
+                      </div>
+                      <div className="text-sm opacity-90">Error Rate</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
