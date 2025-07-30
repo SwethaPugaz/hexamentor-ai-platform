@@ -12,9 +12,11 @@ import {
   ArrowLeft,
   Target,
   Zap,
-  AlertCircle
+  AlertCircle,
+  Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { AssessmentSecurity } from '../components/AssessmentSecurity';
 
 interface Question {
   id: number;
@@ -44,6 +46,74 @@ const Assessment = () => {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentDifficulty, setCurrentDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [securityVerified, setSecurityVerified] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  // Handle security verification
+  const handleSecurityVerified = () => {
+    setSecurityVerified(true);
+    toast.success('Assessment security verified. Starting assessment...');
+  };
+
+  const handleSecurityFailed = () => {
+    toast.error('Security verification failed. Redirecting to dashboard...');
+    navigate('/dashboard');
+  };
+
+  // Monitor for security violations during assessment
+  useEffect(() => {
+    if (!securityVerified) return;
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        toast.error('⚠️ Security Alert: Please return to fullscreen mode');
+        // You could pause the timer here or take other actions
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        toast.error('⚠️ Security Alert: Tab switching detected');
+        // Log the violation or take appropriate action
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent common cheating key combinations
+      if (
+        e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+        (e.ctrlKey && e.shiftKey && e.key === 'C') ||
+        (e.ctrlKey && e.key === 'u') ||
+        (e.metaKey && e.altKey && e.key === 'i')
+      ) {
+        e.preventDefault();
+        toast.error('⚠️ Action blocked for assessment security');
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [securityVerified]);
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+    };
+  }, [cameraStream]);
 
   // Generate adaptive questions based on user's job roles and skills
   useEffect(() => {
@@ -214,6 +284,16 @@ const Assessment = () => {
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Show security setup if not verified
+  if (!securityVerified) {
+    return (
+      <AssessmentSecurity
+        onSecurityVerified={handleSecurityVerified}
+        onSecurityFailed={handleSecurityFailed}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
