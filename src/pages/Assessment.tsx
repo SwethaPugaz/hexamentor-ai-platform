@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { useAssessmentStore } from '../store/assessmentStore';
@@ -7,13 +7,11 @@ import {
   Brain, 
   Clock, 
   CheckCircle, 
-  XCircle, 
   ArrowRight, 
   ArrowLeft,
   Target,
   Zap,
-  AlertCircle,
-  Shield
+  AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AssessmentSecurity } from '../components/AssessmentSecurity';
@@ -47,7 +45,6 @@ const Assessment = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentDifficulty, setCurrentDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [securityVerified, setSecurityVerified] = useState(false);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   // Handle security verification
   const handleSecurityVerified = () => {
@@ -62,23 +59,23 @@ const Assessment = () => {
 
   // Monitor for security violations during assessment
   useEffect(() => {
-    if (!securityVerified) return;
-
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
+      if (securityVerified && !document.fullscreenElement) {
         toast.error('⚠️ Security Alert: Please return to fullscreen mode');
         // You could pause the timer here or take other actions
       }
     };
 
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      if (securityVerified && document.hidden) {
         toast.error('⚠️ Security Alert: Tab switching detected');
         // Log the violation or take appropriate action
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!securityVerified) return;
+      
       // Prevent common cheating key combinations
       if (
         e.key === 'F12' || 
@@ -102,18 +99,6 @@ const Assessment = () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [securityVerified]);
-
-  // Cleanup on component unmount
-  useEffect(() => {
-    return () => {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-      }
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
-    };
-  }, [cameraStream]);
 
   // Generate adaptive questions based on user's job roles and skills
   useEffect(() => {
@@ -176,8 +161,22 @@ const Assessment = () => {
     resetAssessment();
   }, [user?.jobRoles, resetAssessment]);
 
-  // Timer countdown
+  // Define handleSubmitAssessment before using it in useEffect
+  const handleSubmitAssessment = useCallback(async () => {
+    setIsSubmitting(true);
+    
+    // Simulate AI analysis
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    completeAssessment();
+    toast.success('Assessment completed successfully!');
+    navigate('/results');
+  }, [completeAssessment, navigate]);
+
+  // Timer countdown - only runs when security is verified
   useEffect(() => {
+    if (!securityVerified) return;
+
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -189,7 +188,7 @@ const Assessment = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [securityVerified, handleSubmitAssessment]);
 
   const generateAdaptiveQuestions = (jobRoles: string[]): Question[] => {
     const additionalQuestions: Question[] = [];
@@ -266,17 +265,6 @@ const Assessment = () => {
       const prevAnswer = answers[questions[currentQuestion - 1].id];
       setSelectedAnswer(prevAnswer ? parseInt(prevAnswer) : null);
     }
-  };
-
-  const handleSubmitAssessment = async () => {
-    setIsSubmitting(true);
-    
-    // Simulate AI analysis
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    completeAssessment();
-    toast.success('Assessment completed successfully!');
-    navigate('/results');
   };
 
   const formatTime = (seconds: number) => {
