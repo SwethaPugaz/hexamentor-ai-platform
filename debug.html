@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HexaMentor - Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .status {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 HexaMentor</h1>
+        <p>AI-Powered Learning Platform</p>
+        
+        <div class="status">
+            <h3>Deployment Status</h3>
+            <p>✅ Frontend: Loaded Successfully</p>
+            <p id="api-status">🔄 API: Checking...</p>
+        </div>
+        
+        <button onclick="testAPI()">Test API Connection</button>
+        <button onclick="loadMainApp()">Load Main Application</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Test API connection
+        async function testAPI() {
+            const apiStatus = document.getElementById('api-status');
+            const result = document.getElementById('result');
+            
+            try {
+                apiStatus.textContent = '🔄 API: Testing...';
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    apiStatus.textContent = '✅ API: Connected';
+                    result.innerHTML = `<div class="status"><h4>API Response:</h4><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+                } else {
+                    apiStatus.textContent = '❌ API: Error';
+                    result.innerHTML = `<div class="status"><h4>API Error:</h4><p>${data.message || 'Unknown error'}</p></div>`;
+                }
+            } catch (error) {
+                apiStatus.textContent = '❌ API: Failed';
+                result.innerHTML = `<div class="status"><h4>Connection Error:</h4><p>${error.message}</p></div>`;
+            }
+        }
+
+        // Load main React app
+        function loadMainApp() {
+            // This would load the main React application
+            window.location.href = '/app';
+        }
+
+        // Auto-test API on load
+        testAPI();
+    </script>
+</body>
+</html>
