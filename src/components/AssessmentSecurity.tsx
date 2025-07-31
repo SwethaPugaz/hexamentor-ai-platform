@@ -48,6 +48,7 @@ export const AssessmentSecurity: React.FC<AssessmentSecurityProps> = ({
 
   const startCamera = async () => {
     try {
+      console.log('Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 640 },
@@ -57,10 +58,31 @@ export const AssessmentSecurity: React.FC<AssessmentSecurityProps> = ({
         audio: false
       });
 
+      console.log('Camera stream obtained:', stream);
       setCameraStream(stream);
+      // Store globally for cleanup after assessment
+      (window as any).__assessmentCameraStream = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        console.log('Video element srcObject set');
+        
+        // Ensure video plays and is visible
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded');
+          if (videoRef.current) {
+            videoRef.current.play().then(() => {
+              console.log('Video playing successfully');
+            }).catch(error => {
+              console.error('Video play failed:', error);
+            });
+          }
+        };
+        
+        // Add error handler
+        videoRef.current.onerror = (error) => {
+          console.error('Video element error:', error);
+        };
       }
 
       setStep('camera');
@@ -98,6 +120,13 @@ export const AssessmentSecurity: React.FC<AssessmentSecurityProps> = ({
   const cancelAssessment = () => {
     if (cameraStream) {
       cameraStream.getTracks().forEach(track => track.stop());
+    }
+    // Also cleanup global camera stream if set
+    if ((window as any).__assessmentCameraStream) {
+      try {
+        (window as any).__assessmentCameraStream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        (window as any).__assessmentCameraStream = null;
+      } catch {}
     }
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -176,12 +205,31 @@ export const AssessmentSecurity: React.FC<AssessmentSecurityProps> = ({
               ref={videoRef}
               autoPlay
               muted
-              className="w-full h-48 bg-black rounded-lg object-cover"
+              playsInline
+              controls={false}
+              className="w-full h-60 bg-gray-800 rounded-lg border-2 border-blue-300"
+              style={{ 
+                minHeight: '240px', 
+                maxWidth: '100%',
+                objectFit: 'cover',
+                transform: 'scaleX(-1)' // Mirror the video for better user experience
+              }}
             />
           </div>
-          <p className="text-gray-600">
-            Camera is active. Please ensure you are clearly visible.
+          <p className="text-gray-600 text-center">
+            📹 Camera is active. Please ensure you are clearly visible.
           </p>
+          {!cameraStream && (
+            <div className="text-center">
+              <p className="text-red-600 mb-2">Camera not detected</p>
+              <button
+                onClick={startCamera}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Retry Camera Access
+              </button>
+            </div>
+          )}
           <button
             onClick={enterFullscreen}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 mx-auto"

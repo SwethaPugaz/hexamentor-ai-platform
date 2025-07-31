@@ -9,8 +9,6 @@ import {
   CheckCircle, 
   ArrowRight, 
   ArrowLeft,
-  Target,
-  Zap,
   AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,6 +20,14 @@ interface Question {
   options: string[];
   correctAnswer: number;
   difficulty: 'easy' | 'medium' | 'hard';
+  category: string;
+  concept: string;
+}
+
+interface FallbackQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: number;
   category: string;
   concept: string;
 }
@@ -44,12 +50,13 @@ const Assessment = () => {
   const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentDifficulty, setCurrentDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [securityVerified, setSecurityVerified] = useState(false);
+  const [assessmentStartTime, setAssessmentStartTime] = useState<number | null>(null);
 
   // Handle security verification
   const handleSecurityVerified = () => {
     setSecurityVerified(true);
+    setAssessmentStartTime(Date.now());
     toast.success('Assessment security verified. Starting assessment...');
   };
 
@@ -63,14 +70,12 @@ const Assessment = () => {
     const handleFullscreenChange = () => {
       if (securityVerified && !document.fullscreenElement) {
         toast.error('⚠️ Security Alert: Please return to fullscreen mode');
-        // You could pause the timer here or take other actions
       }
     };
 
     const handleVisibilityChange = () => {
       if (securityVerified && document.hidden) {
         toast.error('⚠️ Security Alert: Tab switching detected');
-        // Log the violation or take appropriate action
       }
     };
 
@@ -101,291 +106,380 @@ const Assessment = () => {
     };
   }, [securityVerified]);
 
-  // Generate adaptive questions based on user's job roles and skills
-  useEffect(() => {
-    const generateQuestions = async () => {
-      setIsLoading(true);
-      
-      // Comprehensive question bank with 15+ questions based on job roles
-      const allQuestions: Question[] = [
-        // Core Programming Questions
-        {
-          id: 1,
-          question: "What is the primary purpose of React hooks?",
-          options: [
-            "To add styling to components",
-            "To manage state and lifecycle in functional components", 
-            "To create class components",
-            "To handle routing"
-          ],
-          correctAnswer: 1,
-          difficulty: 'medium',
-          category: 'Frontend Development',
-          concept: 'React Fundamentals'
-        },
-        {
-          id: 2,
-          question: "Which algorithm has the best average time complexity for sorting?",
-          options: [
-            "Bubble Sort - O(n²)",
-            "Quick Sort - O(n log n)",
-            "Selection Sort - O(n²)",
-            "Insertion Sort - O(n²)"
-          ],
-          correctAnswer: 1,
-          difficulty: 'medium',
-          category: 'Problem Solving',
-          concept: 'Algorithms'
-        },
-        {
-          id: 3,
-          question: "In machine learning, what is overfitting?",
-          options: [
-            "When a model performs well on training data but poorly on test data",
-            "When a model has too few parameters",
-            "When training takes too long",
-            "When the dataset is too small"
-          ],
-          correctAnswer: 0,
-          difficulty: 'hard',
-          category: 'Data Science',
-          concept: 'Machine Learning'
-        },
-        {
-          id: 4,
-          question: "What is the difference between let and var in JavaScript?",
-          options: [
-            "No difference",
-            "let has block scope, var has function scope",
-            "var is newer than let",
-            "let is only for numbers"
-          ],
-          correctAnswer: 1,
-          difficulty: 'easy',
-          category: 'Frontend Development',
-          concept: 'JavaScript Fundamentals'
-        },
-        {
-          id: 5,
-          question: "Which HTTP status code indicates a successful request?",
-          options: [
-            "404",
-            "500",
-            "200",
-            "301"
-          ],
-          correctAnswer: 2,
-          difficulty: 'easy',
-          category: 'Backend Development',
-          concept: 'HTTP Protocol'
-        },
-        {
-          id: 6,
-          question: "What is the purpose of database indexing?",
-          options: [
-            "To store more data",
-            "To improve query performance",
-            "To backup data",
-            "To encrypt data"
-          ],
-          correctAnswer: 1,
-          difficulty: 'medium',
-          category: 'Database Management',
-          concept: 'Database Optimization'
-        },
-        {
-          id: 7,
-          question: "In object-oriented programming, what is polymorphism?",
-          options: [
-            "Having multiple constructors",
-            "The ability of different objects to respond to the same method call",
-            "Creating multiple objects",
-            "Inheriting from multiple classes"
-          ],
-          correctAnswer: 1,
-          difficulty: 'medium',
-          category: 'Software Engineering',
-          concept: 'OOP Concepts'
-        },
-        {
-          id: 8,
-          question: "What is the Big O notation for binary search?",
-          options: [
-            "O(n)",
-            "O(log n)",
-            "O(n²)",
-            "O(1)"
-          ],
-          correctAnswer: 1,
-          difficulty: 'medium',
-          category: 'Algorithms',
-          concept: 'Search Algorithms'
-        },
-        {
-          id: 9,
-          question: "Which CSS property is used for creating flexible layouts?",
-          options: [
-            "display: block",
-            "display: flex",
-            "display: inline",
-            "display: none"
-          ],
-          correctAnswer: 1,
-          difficulty: 'easy',
-          category: 'Frontend Development',
-          concept: 'CSS Flexbox'
-        },
-        {
-          id: 10,
-          question: "What is the purpose of version control systems like Git?",
-          options: [
-            "To compile code",
-            "To track changes and collaborate on code",
-            "To run tests",
-            "To deploy applications"
-          ],
-          correctAnswer: 1,
-          difficulty: 'easy',
-          category: 'Software Engineering',
-          concept: 'Version Control'
-        },
-        {
-          id: 11,
-          question: "In REST APIs, what does POST method typically do?",
-          options: [
-            "Retrieve data",
-            "Delete data",
-            "Create new data",
-            "Update existing data"
-          ],
-          correctAnswer: 2,
-          difficulty: 'easy',
-          category: 'Backend Development',
-          concept: 'REST API'
-        },
-        {
-          id: 12,
-          question: "What is the purpose of cross-validation in machine learning?",
-          options: [
-            "To increase model complexity",
-            "To assess model performance and prevent overfitting",
-            "To reduce training time",
-            "To increase dataset size"
-          ],
-          correctAnswer: 1,
-          difficulty: 'hard',
-          category: 'Data Science',
-          concept: 'Model Validation'
-        },
-        {
-          id: 13,
-          question: "Which data structure follows Last-In-First-Out (LIFO) principle?",
-          options: [
-            "Queue",
-            "Stack",
-            "Array",
-            "Linked List"
-          ],
-          correctAnswer: 1,
-          difficulty: 'easy',
-          category: 'Data Structures',
-          concept: 'Stack Operations'
-        },
-        {
-          id: 14,
-          question: "What is the main advantage of using a CDN (Content Delivery Network)?",
-          options: [
-            "Better security",
-            "Faster content delivery to users",
-            "More storage space",
-            "Easier development"
-          ],
-          correctAnswer: 1,
-          difficulty: 'medium',
-          category: 'Web Development',
-          concept: 'Performance Optimization'
-        },
-        {
-          id: 15,
-          question: "In SQL, which clause is used to filter results?",
-          options: [
-            "SELECT",
-            "FROM",
-            "WHERE",
-            "ORDER BY"
-          ],
-          correctAnswer: 2,
-          difficulty: 'easy',
-          category: 'Database Management',
-          concept: 'SQL Queries'
-        }
-      ];
+  // AI question generation using Google Gemini
+  const generateQuestionsWithAI = useCallback(async (jobRoles: string[]): Promise<Question[]> => {
+    // Create detailed prompts for each role
+    const rolePrompts = jobRoles.map(role => {
+      switch (role.toLowerCase()) {
+        case 'frontend developer':
+          return 'React components, hooks, state management, JavaScript ES6+, CSS Grid/Flexbox, responsive design, TypeScript, component lifecycle, event handling, virtual DOM';
+        case 'backend developer':
+          return 'Node.js, Express.js, RESTful APIs, database design, authentication/authorization, middleware, error handling, server architecture, API security, data validation';
+        case 'full stack developer':
+          return 'full stack architecture, React + Node.js integration, database connections, API development, deployment strategies, version control, frontend-backend communication';
+        case 'data scientist':
+          return 'Python data analysis, pandas/numpy, machine learning algorithms, statistical analysis, data visualization, model evaluation, feature engineering, data preprocessing';
+        case 'machine learning engineer':
+          return 'deep learning, neural networks, TensorFlow/PyTorch, model deployment, MLOps, hyperparameter tuning, model optimization, production ML systems';
+        case 'devops engineer':
+          return 'Docker containerization, Kubernetes orchestration, CI/CD pipelines, cloud platforms (AWS/Azure), infrastructure as code, monitoring and logging, automation';
+        case 'ui/ux designer':
+          return 'user experience principles, design thinking, prototyping tools, user research methods, accessibility standards, design systems, usability testing';
+        case 'cybersecurity analyst':
+          return 'network security, threat detection, penetration testing, security protocols, vulnerability assessment, incident response, compliance frameworks';
+        case 'product manager':
+          return 'product strategy, agile methodology, user stories, market analysis, stakeholder management, product roadmaps, data-driven decisions';
+        default:
+          return 'general programming concepts, problem-solving, software engineering principles, algorithms and data structures';
+      }
+    }).join(', ');
 
-      // Filter questions based on user's job roles or return all 15
-      let selectedQuestions = allQuestions;
-      
-      if (user?.jobRoles && user.jobRoles.length > 0) {
-        const roleCategories = new Set<string>();
-        
-        user.jobRoles.forEach(role => {
-          if (role.toLowerCase().includes('frontend') || role.toLowerCase().includes('react')) {
-            roleCategories.add('Frontend Development');
-            roleCategories.add('Web Development');
-          }
-          if (role.toLowerCase().includes('backend') || role.toLowerCase().includes('api')) {
-            roleCategories.add('Backend Development');
-          }
-          if (role.toLowerCase().includes('data') || role.toLowerCase().includes('ml')) {
-            roleCategories.add('Data Science');
-          }
-          if (role.toLowerCase().includes('full') || role.toLowerCase().includes('engineer')) {
-            roleCategories.add('Software Engineering');
-            roleCategories.add('Algorithms');
-            roleCategories.add('Data Structures');
-          }
-          if (role.toLowerCase().includes('database') || role.toLowerCase().includes('sql')) {
-            roleCategories.add('Database Management');
-          }
-        });
+    const prompt = `Generate exactly 15 technical assessment questions for a candidate applying for these specific roles: ${jobRoles.join(' and ')}.
 
-        // If specific roles are selected, prioritize those questions
-        if (roleCategories.size > 0) {
-          const priorityQuestions = allQuestions.filter(q => roleCategories.has(q.category));
-          const otherQuestions = allQuestions.filter(q => !roleCategories.has(q.category));
-          
-          // Take priority questions first, then fill with others to reach 15
-          selectedQuestions = [
-            ...priorityQuestions,
-            ...otherQuestions.slice(0, Math.max(0, 15 - priorityQuestions.length))
-          ].slice(0, 15);
-        }
+IMPORTANT: Questions must be highly relevant to these specific job roles and cover these key areas: ${rolePrompts}
+
+Requirements:
+- Generate exactly 15 questions (no more, no less)
+- Each question must have exactly 4 multiple choice options
+- Include practical, hands-on scenarios relevant to the job roles
+- Mix of difficulty: 5 easy, 5 medium, 5 hard questions
+- Focus on real-world application rather than theory
+- Avoid generic programming questions - make them role-specific
+
+Return ONLY valid JSON in this exact format:
+{
+  "questions": [
+    {
+      "question": "When building a React component, what is the best practice for handling form state?",
+      "options": ["Use document.getElementById", "Use useState hook", "Use global variables", "Use localStorage directly"],
+      "correctAnswer": 1,
+      "difficulty": "medium",
+      "category": "Frontend Development",
+      "concept": "React State Management"
+    }
+  ]
+}`;
+
+    try {
+      // Use Google Gemini API
+      const apiKey = 'AIzaSyD1kOdRoqtlhQJOJ9_3fJJD6mUhDJFEFGE';
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8192,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Gemini API request failed');
       }
 
-      setQuestions(selectedQuestions);
-      setIsLoading(false);
+      const result = await response.json();
+      const generatedText = result.candidates[0]?.content?.parts[0]?.text;
+      
+      if (!generatedText) {
+        throw new Error('No content generated');
+      }
+
+      console.log('🤖 Raw AI Response:', generatedText);
+
+      // Extract JSON from the response
+      const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in AI response');
+      }
+
+      const parsedResult = JSON.parse(jsonMatch[0]);
+      
+      if (!parsedResult.questions || !Array.isArray(parsedResult.questions)) {
+        throw new Error('Invalid question format in AI response');
+      }
+
+      // Format and validate questions
+      const formattedQuestions = parsedResult.questions.slice(0, 15).map((q: {
+        question: string;
+        options: string[];
+        correctAnswer: number;
+        difficulty: string;
+        category: string;
+        concept: string;
+      }, index: number) => ({
+        id: index + 1,
+        question: q.question || `Question ${index + 1}`,
+        options: Array.isArray(q.options) ? q.options.slice(0, 4) : [`Option A`, `Option B`, `Option C`, `Option D`],
+        correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+        difficulty: (['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'medium') as 'easy' | 'medium' | 'hard',
+        category: q.category || jobRoles[0],
+        concept: q.concept || 'Role-specific Knowledge'
+      }));
+
+      // Ensure we have exactly 15 questions
+      while (formattedQuestions.length < 15) {
+        const baseQ = formattedQuestions[formattedQuestions.length % formattedQuestions.length];
+        formattedQuestions.push({
+          ...baseQ,
+          id: formattedQuestions.length + 1,
+          question: `${baseQ.question} (Additional question)`
+        });
+      }
+
+      console.log('🎯 AI Generated role-specific questions:', formattedQuestions.length);
+      console.log('📝 Question topics:', formattedQuestions.map((q: Question) => q.concept));
+      return formattedQuestions.slice(0, 15);
+      
+    } catch (error) {
+      console.error('AI generation failed:', error);
+      
+      // Fallback to role-specific hardcoded questions
+      return generateRoleSpecificFallback(jobRoles);
+    }
+  }, []);
+
+  // Role-specific fallback questions when AI fails
+  const generateRoleSpecificFallback = (jobRoles: string[]): Question[] => {
+    // Comprehensive question bank for each role
+    const roleQuestionBank: { [role: string]: FallbackQuestion[] } = {
+      'Frontend Developer': [
+        { question: "What is the correct way to update state in React functional components?", options: ["this.setState()", "useState hook", "setState()", "state.update()"], correctAnswer: 1, category: "Frontend Developer", concept: "React State Management" },
+        { question: "Which CSS property creates a responsive grid layout?", options: ["display: block", "display: grid", "grid-layout: responsive", "layout: grid"], correctAnswer: 1, category: "Frontend Developer", concept: "CSS Grid" },
+        { question: "What is the Virtual DOM in React?", options: ["Real DOM copy", "JavaScript representation of DOM", "CSS styling engine", "HTML parser"], correctAnswer: 1, category: "Frontend Developer", concept: "React Virtual DOM" },
+        { question: "How do you handle events in React?", options: ["onClick={handleClick()}", "onClick={handleClick}", "onclick='handleClick()'", "onClick='handleClick'"], correctAnswer: 1, category: "Frontend Developer", concept: "React Events" },
+        { question: "What is the purpose of useEffect hook?", options: ["State management", "Side effects", "Event handling", "Component rendering"], correctAnswer: 1, category: "Frontend Developer", concept: "React Hooks" }
+      ],
+      'Backend Developer': [
+        { question: "What is middleware in Express.js?", options: ["Database connection", "Functions in request-response cycle", "Route creation", "Static file management"], correctAnswer: 1, category: "Backend Developer", concept: "Express Middleware" },
+        { question: "Which HTTP status code indicates successful resource creation?", options: ["200", "201", "204", "301"], correctAnswer: 1, category: "Backend Developer", concept: "HTTP Status Codes" },
+        { question: "What is the purpose of JWT tokens?", options: ["Data storage", "Authentication", "CSS styling", "DOM manipulation"], correctAnswer: 1, category: "Backend Developer", concept: "Authentication" },
+        { question: "How do you handle database connections in Node.js?", options: ["Direct file system", "Connection pools", "Only synchronous calls", "Browser localStorage"], correctAnswer: 1, category: "Backend Developer", concept: "Database Management" },
+        { question: "What is RESTful API design?", options: ["Random endpoints", "Representational State Transfer principles", "CSS framework", "Database schema"], correctAnswer: 1, category: "Backend Developer", concept: "API Design" }
+      ],
+      'Full Stack Developer': [
+        { question: "Which technology is commonly used to connect a React frontend to a Node.js backend?", options: ["WebSockets", "REST API", "GraphQL", "All of the above"], correctAnswer: 3, category: "Full Stack Developer", concept: "Frontend-Backend Communication" },
+        { question: "What is a common deployment strategy for full stack apps?", options: ["Monorepo with CI/CD", "Manual FTP upload", "Emailing code", "Copy-paste to server"], correctAnswer: 0, category: "Full Stack Developer", concept: "Deployment Strategies" },
+        { question: "Which database is NoSQL?", options: ["MySQL", "MongoDB", "PostgreSQL", "Oracle"], correctAnswer: 1, category: "Full Stack Developer", concept: "Database Types" },
+        { question: "What is the main benefit of using TypeScript in a full stack project?", options: ["Faster runtime", "Static type checking", "Better CSS", "No benefit"], correctAnswer: 1, category: "Full Stack Developer", concept: "TypeScript" },
+        { question: "Which tool is used for version control?", options: ["Git", "Docker", "Nginx", "Jenkins"], correctAnswer: 0, category: "Full Stack Developer", concept: "Version Control" }
+      ],
+      'Data Scientist': [
+        { question: "Which Python library is primarily used for data manipulation?", options: ["numpy", "pandas", "matplotlib", "scikit-learn"], correctAnswer: 1, category: "Data Scientist", concept: "Python Libraries" },
+        { question: "What is the purpose of feature engineering?", options: ["Reduce dataset size", "Improve model performance by transforming variables", "Visualize data", "Clean missing values"], correctAnswer: 1, category: "Data Scientist", concept: "Feature Engineering" },
+        { question: "Which statistical measure is most appropriate for handling outliers?", options: ["Mean", "Median", "Mode", "Range"], correctAnswer: 1, category: "Data Scientist", concept: "Statistics" },
+        { question: "What does cross-validation help prevent?", options: ["Underfitting", "Overfitting", "Data leakage", "Feature scaling"], correctAnswer: 1, category: "Data Scientist", concept: "Model Validation" },
+        { question: "Which algorithm is best for clustering unlabeled data?", options: ["Linear Regression", "K-Means", "Logistic Regression", "Decision Trees"], correctAnswer: 1, category: "Data Scientist", concept: "Unsupervised Learning" }
+      ],
+      'Machine Learning Engineer': [
+        { question: "Which library is commonly used for deep learning in Python?", options: ["TensorFlow", "NumPy", "Pandas", "Matplotlib"], correctAnswer: 0, category: "Machine Learning Engineer", concept: "Deep Learning Libraries" },
+        { question: "What is hyperparameter tuning?", options: ["Changing model weights", "Optimizing model settings", "Cleaning data", "Visualizing results"], correctAnswer: 1, category: "Machine Learning Engineer", concept: "Model Optimization" },
+        { question: "Which is a common activation function in neural networks?", options: ["ReLU", "Sigmoid", "Tanh", "All of the above"], correctAnswer: 3, category: "Machine Learning Engineer", concept: "Activation Functions" },
+        { question: "What is MLOps?", options: ["Machine Learning Operations", "A type of neural network", "A data cleaning method", "A visualization tool"], correctAnswer: 0, category: "Machine Learning Engineer", concept: "MLOps" },
+        { question: "Which framework is used for model deployment?", options: ["Flask", "Django", "FastAPI", "All of the above"], correctAnswer: 3, category: "Machine Learning Engineer", concept: "Model Deployment" }
+      ],
+      'DevOps Engineer': [
+        { question: "What is the main purpose of CI/CD pipelines?", options: ["Manual deployment", "Automated build and deployment", "Writing code", "Testing only"], correctAnswer: 1, category: "DevOps Engineer", concept: "CI/CD" },
+        { question: "Which tool is used for containerization?", options: ["Docker", "Jenkins", "Git", "Nginx"], correctAnswer: 0, category: "DevOps Engineer", concept: "Containerization" },
+        { question: "What is Infrastructure as Code?", options: ["Writing code for infrastructure", "Manual server setup", "Database design", "UI design"], correctAnswer: 0, category: "DevOps Engineer", concept: "IaC" },
+        { question: "Which platform is commonly used for cloud deployments?", options: ["AWS", "Azure", "Google Cloud", "All of the above"], correctAnswer: 3, category: "DevOps Engineer", concept: "Cloud Platforms" },
+        { question: "What is Kubernetes used for?", options: ["Orchestrating containers", "Writing code", "Testing", "Monitoring"], correctAnswer: 0, category: "DevOps Engineer", concept: "Kubernetes" }
+      ],
+      'UI/UX Designer': [
+        { question: "What is the primary goal of user experience design?", options: ["Make it look pretty", "Create usable and meaningful experiences", "Add more features", "Reduce development time"], correctAnswer: 1, category: "UI/UX Designer", concept: "UX Principles" },
+        { question: "Which design principle emphasizes visual hierarchy?", options: ["Contrast", "Alignment", "Repetition", "Proximity"], correctAnswer: 0, category: "UI/UX Designer", concept: "Design Principles" },
+        { question: "What is a wireframe in design?", options: ["Final design", "Low-fidelity structural blueprint", "Color palette", "Font selection"], correctAnswer: 1, category: "UI/UX Designer", concept: "Design Process" },
+        { question: "Which tool is commonly used for prototyping?", options: ["Excel", "Figma", "Notepad", "Calculator"], correctAnswer: 1, category: "UI/UX Designer", concept: "Design Tools" },
+        { question: "What is the purpose of user personas?", options: ["Decoration", "Represent target user groups", "Legal requirements", "Technical specifications"], correctAnswer: 1, category: "UI/UX Designer", concept: "User Research" }
+      ],
+      'Cybersecurity Analyst': [
+        { question: "What is the primary goal of penetration testing?", options: ["To develop new software", "To identify vulnerabilities in a system", "To increase network speed", "To backup data"], correctAnswer: 1, category: "Cybersecurity Analyst", concept: "Penetration Testing" },
+        { question: "Which protocol is used to securely transfer files over the Internet?", options: ["FTP", "HTTP", "SFTP", "SMTP"], correctAnswer: 2, category: "Cybersecurity Analyst", concept: "Secure Protocols" },
+        { question: "What does the principle of least privilege mean?", options: ["Giving all users admin rights", "Users have only the access necessary to perform their job", "No one can access the system", "Everyone shares the same password"], correctAnswer: 1, category: "Cybersecurity Analyst", concept: "Access Control" },
+        { question: "Which tool is commonly used for network packet analysis?", options: ["Photoshop", "Wireshark", "Excel", "Notepad"], correctAnswer: 1, category: "Cybersecurity Analyst", concept: "Network Analysis" },
+        { question: "What is a common method for preventing phishing attacks?", options: ["Ignoring emails", "User education and email filtering", "Using weak passwords", "Disabling antivirus"], correctAnswer: 1, category: "Cybersecurity Analyst", concept: "Phishing Prevention" }
+      ],
+      'Product Manager': [
+        { question: "What is a user story in agile methodology?", options: ["A bug report", "A feature description from the user's perspective", "A test case", "A design mockup"], correctAnswer: 1, category: "Product Manager", concept: "Agile Methodology" },
+        { question: "Which tool is commonly used for product roadmapping?", options: ["Jira", "Photoshop", "Excel", "Slack"], correctAnswer: 0, category: "Product Manager", concept: "Product Roadmaps" },
+        { question: "What is MVP in product development?", options: ["Most Valuable Player", "Minimum Viable Product", "Maximum Value Proposition", "Market Value Product"], correctAnswer: 1, category: "Product Manager", concept: "Product Development" },
+        { question: "What is stakeholder management?", options: ["Managing code", "Managing people with interest in the product", "Managing servers", "Managing finances"], correctAnswer: 1, category: "Product Manager", concept: "Stakeholder Management" },
+        { question: "Which metric is most important for product-market fit?", options: ["Churn rate", "Net Promoter Score", "Page views", "Lines of code"], correctAnswer: 1, category: "Product Manager", concept: "Product-Market Fit" }
+      ]
     };
 
-    generateQuestions();
-    resetAssessment();
-  }, [user?.jobRoles, resetAssessment]);
+    let selectedQuestions: FallbackQuestion[] = [];
+    jobRoles.forEach(role => {
+      // Priority 1: Exact match (case-insensitive)
+      const exactMatch = Object.keys(roleQuestionBank).find(key => key.toLowerCase() === role.toLowerCase());
+      if (exactMatch) {
+        selectedQuestions.push(...roleQuestionBank[exactMatch]);
+        return;
+      }
+      // Priority 2: Fuzzy/substring match (only if user typo or partial, not as a fallback to other roles)
+      const roleLower = role.toLowerCase();
+      if (roleLower.includes('frontend')) {
+        selectedQuestions.push(...roleQuestionBank['Frontend Developer']);
+      } else if (roleLower.includes('backend')) {
+        selectedQuestions.push(...roleQuestionBank['Backend Developer']);
+      } else if (roleLower.includes('full stack')) {
+        selectedQuestions.push(...roleQuestionBank['Full Stack Developer']);
+      } else if (roleLower.includes('machine learning')) {
+        selectedQuestions.push(...roleQuestionBank['Machine Learning Engineer']);
+      } else if (roleLower.includes('devops')) {
+        selectedQuestions.push(...roleQuestionBank['DevOps Engineer']);
+      } else if (roleLower.includes('data')) {
+        selectedQuestions.push(...roleQuestionBank['Data Scientist']);
+      } else if (roleLower.includes('ui') && roleLower.includes('ux')) {
+        selectedQuestions.push(...roleQuestionBank['UI/UX Designer']);
+      } else if (roleLower.includes('cyber') || roleLower.includes('security')) {
+        selectedQuestions.push(...roleQuestionBank['Cybersecurity Analyst']);
+      } else if (roleLower.includes('product')) {
+        selectedQuestions.push(...roleQuestionBank['Product Manager']);
+      }
+    });
 
-  // Define handleSubmitAssessment before using it in useEffect
+    // If no specific questions found, return empty (no mix from other roles)
+    if (selectedQuestions.length === 0) {
+      return [];
+    }
+
+    // Format and ensure 15 questions, maximizing uniqueness
+    let questions: Question[] = [];
+    // Shuffle selectedQuestions for randomness
+    const shuffled = [...selectedQuestions].sort(() => Math.random() - 0.5);
+    // Use all unique questions first
+    for (let i = 0; i < Math.min(15, shuffled.length); i++) {
+      questions.push({
+        id: i + 1,
+        question: shuffled[i].question,
+        options: shuffled[i].options,
+        correctAnswer: shuffled[i].correctAnswer,
+        difficulty: (i < 5 ? 'easy' : i < 10 ? 'medium' : 'hard') as 'easy' | 'medium' | 'hard',
+        category: shuffled[i].category,
+        concept: shuffled[i].concept
+      });
+    }
+    // If less than 15, repeat but mark as additional
+    let nextId = questions.length + 1;
+    while (questions.length < 15) {
+      const baseQ = shuffled[(questions.length) % shuffled.length];
+      questions.push({
+        id: nextId++,
+        question: `${baseQ.question} (Additional question)`,
+        options: baseQ.options,
+        correctAnswer: baseQ.correctAnswer,
+        difficulty: (questions.length < 5 ? 'easy' : questions.length < 10 ? 'medium' : 'hard') as 'easy' | 'medium' | 'hard',
+        category: baseQ.category,
+        concept: baseQ.concept
+      });
+    }
+    return questions;
+  };
+
+  // Generate AI-powered questions specifically for user's selected job roles
+  useEffect(() => {
+    const generateAIQuestions = async () => {
+      if (!user?.jobRoles || user.jobRoles.length === 0) {
+        toast.error('No job roles selected. Please complete your profile first.');
+        navigate('/skills');
+        return;
+      }
+
+      setIsLoading(true);
+
+      try {
+        console.log('🎯 Generating AI questions for roles:', user.jobRoles);
+
+        // Call local AI generation using Google Gemini
+        const aiQuestions = await generateQuestionsWithAI(user.jobRoles);
+
+        console.log('✅ Generated questions:', aiQuestions.length);
+        setQuestions(aiQuestions);
+        toast.success('Questions generated based on your selected roles!');
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error generating questions:', error);
+        toast.error('Failed to generate questions. Please try again.');
+        navigate('/dashboard');
+        setIsLoading(false);
+      }
+    };
+
+    if (securityVerified) {
+      generateAIQuestions();
+      resetAssessment();
+    }
+  }, [user?.jobRoles, resetAssessment, navigate, securityVerified, generateQuestionsWithAI]);
+
+  // Handle answer selection
+  const handleAnswerSelect = (answerIndex: number) => {
+    setSelectedAnswer(answerIndex);
+    setAnswer(questions[currentQuestion]?.id, answerIndex.toString());
+  };
+
+  // Navigation
+  const goToNextQuestion = () => {
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+      setSelectedAnswer(
+        answers[questions[currentQuestion + 1]?.id] 
+          ? parseInt(answers[questions[currentQuestion + 1].id]) 
+          : null
+      );
+    }
+  };
+
+  const goToPreviousQuestion = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
+      setSelectedAnswer(
+        answers[questions[currentQuestion - 1]?.id] 
+          ? parseInt(answers[questions[currentQuestion - 1].id]) 
+          : null
+      );
+    }
+  };
+
+  // Submit assessment
   const handleSubmitAssessment = useCallback(async () => {
     setIsSubmitting(true);
-    
+
+    // Stop the camera stream immediately after assessment is submitted
+    if ((window as any).__assessmentCameraStream) {
+      try {
+        (window as any).__assessmentCameraStream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+        (window as any).__assessmentCameraStream = null;
+      } catch {}
+    }
+
+
     // Calculate assessment results
     const totalQuestions = questions.length;
     let correctAnswers = 0;
     const categoryScores: { [key: string]: { correct: number; total: number } } = {};
     const skillGaps: Array<{ skill: string; score: number; needsImprovement: boolean; topics: string[] }> = [];
+    // Track performance by difficulty
+    const difficultyStats: { [key: string]: { correct: number; total: number; topics: string[] } } = {
+      easy: { correct: 0, total: 0, topics: [] },
+      medium: { correct: 0, total: 0, topics: [] },
+      hard: { correct: 0, total: 0, topics: [] }
+    };
 
-    // Calculate scores by category
+    // Calculate scores by category and difficulty
     questions.forEach(question => {
       const userAnswer = answers[question.id];
       const isCorrect = userAnswer && parseInt(userAnswer) === question.correctAnswer;
-      
       if (isCorrect) correctAnswers++;
-
       // Track category performance
       if (!categoryScores[question.category]) {
         categoryScores[question.category] = { correct: 0, total: 0 };
@@ -394,77 +488,82 @@ const Assessment = () => {
       if (isCorrect) {
         categoryScores[question.category].correct++;
       }
+      // Track difficulty performance
+      if (question.difficulty && difficultyStats[question.difficulty]) {
+        difficultyStats[question.difficulty].total++;
+        if (isCorrect) {
+          difficultyStats[question.difficulty].correct++;
+        } else {
+          difficultyStats[question.difficulty].topics.push(question.concept);
+        }
+      }
     });
 
     // Calculate overall score
     const overallScore = Math.round((correctAnswers / totalQuestions) * 100);
 
-    // Identify skill gaps (categories with < 70% score)
-    Object.entries(categoryScores).forEach(([category, score]) => {
-      const categoryPercentage = Math.round((score.correct / score.total) * 100);
-      const needsImprovement = categoryPercentage < 70;
-      
-      // Get topics that need improvement in this category
-      const weakTopics = questions
-        .filter(q => q.category === category)
-        .filter(q => {
-          const userAnswer = answers[q.id];
-          return !userAnswer || parseInt(userAnswer) !== q.correctAnswer;
-        })
-        .map(q => q.concept);
-
-      skillGaps.push({
-        skill: category,
-        score: categoryPercentage,
-        needsImprovement,
-        topics: [...new Set(weakTopics)] // Remove duplicates
-      });
+    // Generate skill gaps and recommendations
+    Object.entries(categoryScores).forEach(([category, scores]) => {
+      const categoryScore = Math.round((scores.correct / scores.total) * 100);
+      const needsImprovement = categoryScore < 70;
+      if (needsImprovement) {
+        skillGaps.push({
+          skill: category,
+          score: categoryScore,
+          needsImprovement: true,
+          topics: questions
+            .filter(q => q.category === category && (!answers[q.id] || parseInt(answers[q.id]) !== q.correctAnswer))
+            .map(q => q.concept)
+        });
+      }
     });
 
-    // Store results in assessment store
-    const assessmentResults = {
-      score: overallScore, // Add the missing score property
-      totalQuestions,
-      correctAnswers,
-      categoryScores: Object.entries(categoryScores).map(([category, score]) => ({
-        category,
-        score: Math.round((score.correct / score.total) * 100),
-        correct: score.correct,
-        total: score.total
-      })),
-      skillGaps: skillGaps.filter(gap => gap.needsImprovement),
-      completedAt: new Date().toISOString(),
-      timeSpent: Math.round((45 * 60 - timeLeft) / 60) // Time spent in minutes
-    };
-
-    // Simulate AI analysis
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Save results to store
-    setResults(assessmentResults);
-    completeAssessment();
-    
-    // Show score notification
-    if (overallScore >= 80) {
-      toast.success(`Excellent! You scored ${overallScore}%`);
-    } else if (overallScore >= 60) {
-      toast.success(`Good job! You scored ${overallScore}%`);
+    // Calculate accurate time spent
+    let timeSpent = null;
+    if (assessmentStartTime) {
+      timeSpent = Math.round((Date.now() - assessmentStartTime) / 1000); // in seconds
     } else {
-      toast.error(`You scored ${overallScore}%. Keep practicing!`);
+      timeSpent = 45 * 60 - timeLeft; // fallback
     }
 
-    // Store detailed results for Results page
-    localStorage.setItem('assessmentResults', JSON.stringify(assessmentResults));
-    
-    navigate('/results');
-  }, [completeAssessment, navigate, questions, answers, timeLeft, setResults]);
+    // Create detailed results with proper typing
+    const detailedResults = {
+      totalQuestions,
+      correctAnswers,
+      score: overallScore,
+      timeSpent,
+      categoryBreakdown: categoryScores,
+      categoryScores: Object.entries(categoryScores).map(([category, scores]) => ({
+        category,
+        score: Math.round((scores.correct / scores.total) * 100),
+        correct: scores.correct,
+        total: scores.total
+      })),
+      skillGaps,
+      difficultyStats, // <-- add this for Results.tsx
+      recommendations: skillGaps.length > 0 
+        ? [`Focus on improving ${skillGaps.map(sg => sg.skill).join(', ')}`, 'Practice more hands-on coding exercises', 'Review fundamental concepts in weak areas']
+        : ['Great job! Continue practicing to maintain your skills', 'Consider taking on more challenging projects', 'Share your knowledge with others'],
+      completedAt: new Date().toISOString()
+    };
 
-  // Timer countdown - only runs when security is verified
+    // Store results
+    setResults(detailedResults);
+    completeAssessment();
+
+    // Store in localStorage for persistence
+    localStorage.setItem('latestAssessmentResult', JSON.stringify(detailedResults));
+
+    // Navigate to results
+    navigate('/results');
+  }, [questions, answers, timeLeft, setResults, completeAssessment, navigate, assessmentStartTime]);
+
+  // Timer effect with handleSubmitAssessment dependency
   useEffect(() => {
-    if (!securityVerified) return;
+    if (!securityVerified || isLoading) return;
 
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           handleSubmitAssessment();
           return 0;
@@ -474,72 +573,55 @@ const Assessment = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [securityVerified, handleSubmitAssessment]);
+  }, [securityVerified, isLoading, handleSubmitAssessment]);
 
-  const handleAnswerSelect = (answerIndex: number) => {
-    setSelectedAnswer(answerIndex);
-  };
-
-  const handleNextQuestion = () => {
-    if (selectedAnswer === null) {
-      toast.error('Please select an answer');
-      return;
-    }
-
-    setAnswer(questions[currentQuestion].id, selectedAnswer.toString());
-    
-    // Adaptive difficulty adjustment
-    const isCorrect = selectedAnswer === questions[currentQuestion].correctAnswer;
-    if (isCorrect && currentDifficulty === 'easy') {
-      setCurrentDifficulty('medium');
-    } else if (isCorrect && currentDifficulty === 'medium') {
-      setCurrentDifficulty('hard');
-    } else if (!isCorrect && currentDifficulty === 'hard') {
-      setCurrentDifficulty('medium');
-    } else if (!isCorrect && currentDifficulty === 'medium') {
-      setCurrentDifficulty('easy');
-    }
-
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setSelectedAnswer(null);
-    } else {
-      handleSubmitAssessment();
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-      const prevAnswer = answers[questions[currentQuestion - 1].id];
-      setSelectedAnswer(prevAnswer ? parseInt(prevAnswer) : null);
-    }
-  };
-
+  // Format time display
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Show security setup if not verified
+  // Update selected answer when current question changes
+  useEffect(() => {
+    setSelectedAnswer(
+      answers[questions[currentQuestion]?.id] 
+        ? parseInt(answers[questions[currentQuestion].id]) 
+        : null
+    );
+  }, [currentQuestion, answers, questions]);
+
+  // Show security setup first
   if (!securityVerified) {
     return (
-      <AssessmentSecurity
+      <AssessmentSecurity 
         onSecurityVerified={handleSecurityVerified}
         onSecurityFailed={handleSecurityFailed}
       />
     );
   }
 
+  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
-        />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Generating Your Assessment</h2>
+          <p className="text-gray-600">Creating questions based on your selected job roles...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">No Questions Available</h2>
+          <p className="text-gray-600">Unable to generate assessment questions. Please try again.</p>
+        </div>
       </div>
     );
   }
@@ -548,177 +630,133 @@ const Assessment = () => {
   const progress = ((currentQuestion + 1) / questions.length) * 100;
 
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="bg-white rounded-2xl shadow-lg p-6 border">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-teal-500 rounded-full flex items-center justify-center">
-                  <Brain className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-left">
-                  <h1 className="text-xl font-bold text-gray-900">AI-Adaptive Assessment</h1>
-                  <p className="text-sm text-gray-600">Powered by Hexaware AI</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 text-orange-600">
-                  <Clock className="w-5 h-5" />
-                  <span className="font-mono text-lg font-bold">{formatTime(timeLeft)}</span>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-600">Question</div>
-                  <div className="font-bold text-gray-900">
-                    {currentQuestion + 1} of {questions.length}
-                  </div>
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Brain className="w-8 h-8 text-blue-600" />
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">AI Assessment</h1>
+                <p className="text-sm text-gray-600">Question {currentQuestion + 1} of {questions.length}</p>
               </div>
             </div>
             
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5 }}
-                className="bg-gradient-to-r from-blue-500 to-teal-500 h-3 rounded-full"
-              />
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-5 h-5 text-gray-500" />
+                <span className={`font-mono text-lg ${timeLeft < 300 ? 'text-red-600' : 'text-gray-700'}`}>
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+              
+              <button
+                onClick={handleSubmitAssessment}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+              </button>
             </div>
           </div>
-        </motion.div>
+          
+          {/* Progress bar */}
+          <div className="mt-4">
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        {/* Question Card */}
+      {/* Question Content */}
+      <div className="max-w-4xl mx-auto px-4 py-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion}
-            initial={{ opacity: 0, x: 50 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white rounded-2xl shadow-lg p-8 border mb-8"
+            exit={{ opacity: 0, x: -20 }}
+            className="bg-white rounded-xl shadow-lg p-8"
           >
+            {/* Question header */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                    {currentQ?.category}
-                  </span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    currentQ?.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                    currentQ?.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {currentQ?.difficulty}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 text-gray-500">
-                  <Target className="w-4 h-4" />
-                  <span className="text-sm">{currentQ?.concept}</span>
-                </div>
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                  {currentQ.category}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  currentQ.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                  currentQ.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {currentQ.difficulty}
+                </span>
               </div>
               
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 leading-relaxed">
-                {currentQ?.question}
+              <h2 className="text-2xl font-bold text-gray-900 leading-relaxed">
+                {currentQ.question}
               </h2>
             </div>
 
-            <div className="space-y-4">
-              {currentQ?.options.map((option, index) => (
-                <motion.button
+            {/* Answer options */}
+            <div className="space-y-4 mb-8">
+              {currentQ.options.map((option, index) => (
+                <button
                   key={index}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                   onClick={() => handleAnswerSelect(index)}
-                  className={`w-full p-4 text-left rounded-xl border-2 transition-all ${
+                  className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
                     selectedAnswer === index
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                      selectedAnswer === index
-                        ? 'border-blue-500 bg-blue-500'
+                      selectedAnswer === index 
+                        ? 'border-blue-500 bg-blue-500' 
                         : 'border-gray-300'
                     }`}>
                       {selectedAnswer === index && (
                         <CheckCircle className="w-4 h-4 text-white" />
                       )}
                     </div>
-                    <span className="font-medium">{option}</span>
+                    <span className="text-gray-800">{option}</span>
                   </div>
-                </motion.button>
+                </button>
               ))}
+            </div>
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={goToPreviousQuestion}
+                disabled={currentQuestion === 0}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:text-gray-800 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Previous</span>
+              </button>
+
+              <div className="text-sm text-gray-500">
+                Question {currentQuestion + 1} of {questions.length}
+              </div>
+
+              <button
+                onClick={goToNextQuestion}
+                disabled={currentQuestion === questions.length - 1}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
+              >
+                <span>Next</span>
+                <ArrowRight className="w-5 h-5" />
+              </button>
             </div>
           </motion.div>
         </AnimatePresence>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handlePreviousQuestion}
-            disabled={currentQuestion === 0}
-            className="flex items-center space-x-2 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Previous</span>
-          </motion.button>
-
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <AlertCircle className="w-4 h-4" />
-            <span>AI is adapting difficulty based on your responses</span>
-          </div>
-
-          {currentQuestion === questions.length - 1 ? (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleSubmitAssessment}
-              disabled={isSubmitting}
-              className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-teal-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-green-600 hover:to-teal-600 disabled:opacity-50 transition-all"
-            >
-              <span>{isSubmitting ? 'Analyzing...' : 'Submit Assessment'}</span>
-              <CheckCircle className="w-4 h-4" />
-            </motion.button>
-          ) : (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleNextQuestion}
-              className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-teal-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-teal-600 transition-all"
-            >
-              <span>Next Question</span>
-              <ArrowRight className="w-4 h-4" />
-            </motion.button>
-          )}
-        </div>
-
-        {/* AI Insight */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl p-6"
-        >
-          <div className="flex items-center space-x-3">
-            <Zap className="w-6 h-6" />
-            <div>
-              <h3 className="font-bold">AI Assessment Engine</h3>
-              <p className="text-sm opacity-90">
-                Our AI is analyzing your responses in real-time to provide personalized skill gap analysis
-              </p>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </div>
   );

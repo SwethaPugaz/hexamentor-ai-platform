@@ -1,5 +1,7 @@
 import express from 'express';
-import { protect, authorize } from '../middleware/auth';
+import { protect } from '../middleware/auth';
+import { authorize } from '../middleware/auth';
+import { getAllUsers } from '../controllers/adminController';
 
 const router = express.Router();
 
@@ -24,3 +26,6 @@ router.get('/analytics', protect, authorize('admin'), async (req, res) => {
 });
 
 export default router;
+
+// Get all users (admin only)
+router.get('/users', protect, authorize('admin'), getAllUsers);

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { useAssessmentStore } from '../store/assessmentStore';
@@ -7,18 +8,12 @@ import {
   Clock, 
   Star, 
   Play, 
-  CheckCircle, 
-  Filter,
+  CheckCircle,
   Search,
   Target,
   Brain,
-  Award,
   Users,
-  TrendingUp,
-  Zap,
-  Code,
-  Database,
-  BarChart3
+  Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -51,13 +46,35 @@ const Courses = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [showRecommendedOnly, setShowRecommendedOnly] = useState(true);
 
+  // Parse query string for skill and topics
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const skillParam = queryParams.get('skill');
+  const topicsParam = queryParams.get('topics');
+  const topicsFromQuery = useMemo(() => topicsParam ? topicsParam.split(',').map(t => t.trim()) : [], [topicsParam]);
+
+  // Helper to check if a course matches the skill or topics
+  const isCourseRecommended = useCallback((course: Course) => {
+    // Match by skill gap category
+    if (skillParam && course.skillGapsFilled.some(gap => gap.toLowerCase() === skillParam.toLowerCase())) {
+      return true;
+    }
+    // Match by topics (course.skills)
+    if (topicsFromQuery.length > 0 && course.skills.some(skill => topicsFromQuery.some(topic => skill.toLowerCase().includes(topic.toLowerCase())))) {
+      return true;
+    }
+    // Fallback to original logic (for dashboard view)
+    if (!skillParam && !topicsFromQuery.length && course.skillGapsFilled.some(gap => skillGaps.includes(gap))) {
+      return true;
+    }
+    return false;
+  }, [skillParam, topicsFromQuery, skillGaps]);
+
   useEffect(() => {
     const generateCourses = async () => {
       setLoading(true);
-      
       // Simulate AI course generation
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
       const mockCourses: Course[] = [
         {
           id: '1',
@@ -71,7 +88,7 @@ const Courses = () => {
           skills: ['Algorithm Design', 'Logical Thinking', 'Pattern Recognition'],
           instructor: 'Dr. Sarah Chen',
           thumbnail: 'https://images.pexels.com/photos/3861958/pexels-photo-3861958.jpeg?auto=compress&cs=tinysrgb&w=400',
-          isRecommended: skillGaps.includes('Problem Solving'),
+          isRecommended: false, // will be set below
           aiGenerated: true,
           skillGapsFilled: ['Problem Solving', 'Logical Thinking']
         },
@@ -87,7 +104,7 @@ const Courses = () => {
           skills: ['Data Analysis', 'Critical Thinking', 'Statistical Reasoning'],
           instructor: 'Prof. Michael Rodriguez',
           thumbnail: 'https://images.pexels.com/photos/590022/pexels-photo-590022.jpeg?auto=compress&cs=tinysrgb&w=400',
-          isRecommended: skillGaps.includes('Critical Analysis'),
+          isRecommended: false,
           aiGenerated: true,
           skillGapsFilled: ['Critical Analysis']
         },
@@ -103,7 +120,7 @@ const Courses = () => {
           skills: ['Design Thinking', 'Creativity', 'Innovation Methods'],
           instructor: 'Emma Thompson',
           thumbnail: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400',
-          isRecommended: skillGaps.includes('Innovation & Creativity'),
+          isRecommended: false,
           aiGenerated: true,
           skillGapsFilled: ['Innovation & Creativity']
         },
@@ -119,7 +136,7 @@ const Courses = () => {
           skills: ['Architecture', 'Design Patterns', 'Scalability'],
           instructor: 'David Kim',
           thumbnail: 'https://images.pexels.com/photos/1181676/pexels-photo-1181676.jpeg?auto=compress&cs=tinysrgb&w=400',
-          isRecommended: skillGaps.includes('System Design'),
+          isRecommended: false,
           aiGenerated: true,
           skillGapsFilled: ['System Design']
         },
@@ -135,7 +152,7 @@ const Courses = () => {
           skills: ['JavaScript', 'React', 'Performance Optimization'],
           instructor: 'Lisa Wang',
           thumbnail: 'https://images.pexels.com/photos/1181467/pexels-photo-1181467.jpeg?auto=compress&cs=tinysrgb&w=400',
-          isRecommended: user?.skills?.includes('JavaScript'),
+          isRecommended: false,
           aiGenerated: false,
           skillGapsFilled: []
         },
@@ -151,18 +168,25 @@ const Courses = () => {
           skills: ['Python', 'ML Algorithms', 'Data Science'],
           instructor: 'Dr. Alex Johnson',
           thumbnail: 'https://images.pexels.com/photos/8386434/pexels-photo-8386434.jpeg?auto=compress&cs=tinysrgb&w=400',
-          isRecommended: user?.jobRoles?.includes('Data Scientist'),
+          isRecommended: false,
           aiGenerated: false,
           skillGapsFilled: []
         }
       ];
       
-      setCourses(mockCourses);
+
+      // Set isRecommended dynamically based on query params or skillGaps
+      const updatedCourses = mockCourses.map(course => ({
+        ...course,
+        isRecommended: isCourseRecommended(course)
+      }));
+      setCourses(updatedCourses);
       setLoading(false);
     };
 
     generateCourses();
-  }, [skillGaps, user?.skills, user?.jobRoles]);
+    // Only rerun if query params or skillGaps change
+  }, [skillGaps, user?.skills, user?.jobRoles, skillParam, topicsParam, isCourseRecommended]);
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -170,7 +194,6 @@ const Courses = () => {
     const matchesCategory = selectedCategory === 'all' || course.category === selectedCategory;
     const matchesDifficulty = selectedDifficulty === 'all' || course.difficulty === selectedDifficulty;
     const matchesRecommended = !showRecommendedOnly || course.isRecommended;
-    
     return matchesSearch && matchesCategory && matchesDifficulty && matchesRecommended;
   });
 

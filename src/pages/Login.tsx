@@ -20,24 +20,76 @@ const Login = () => {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Try to call backend API for authentication
+      let result;
+      let isBackendAvailable = true;
       
-      // Mock authentication - in real app, validate with backend
-      const mockUser = {
-        id: '1',
-        email: data.email,
-        name: data.email.split('@')[0],
-        role: data.email.includes('admin') ? 'admin' as const : 'employee' as const,
-        skills: [],
-        jobRoles: []
-      };
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || 'Login failed');
+        }
+
+        // Store the authentication token
+        if (result.token) {
+          localStorage.setItem('token', result.token);
+        }
+      } catch (backendError) {
+        console.warn('Backend not available, using mock authentication:', backendError);
+        isBackendAvailable = false;
+        
+        // Fallback to mock authentication
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Check if user exists in localStorage (for returning users)
+        const existingUserData = localStorage.getItem('hexamentor-auth');
+        let storedUser = null;
+        
+        if (existingUserData) {
+          try {
+            const parsedData = JSON.parse(existingUserData);
+            if (parsedData.state?.user?.email === data.email) {
+              storedUser = parsedData.state.user;
+            }
+          } catch (e) {
+            console.error('Error parsing stored user data:', e);
+          }
+        }
+        
+        result = {
+          user: storedUser || {
+            id: '1',
+            email: data.email,
+            name: data.email.split('@')[0],
+            role: data.email.includes('admin') ? 'admin' as const : 'employee' as const,
+            skills: [],
+            jobRoles: []
+          }
+        };
+      }
+
+      // Login with user data (either from backend or fallback)
+      login(result.user);
+      toast.success(`Login successful!${isBackendAvailable ? '' : ' (Offline mode)'}`);
       
-      login(mockUser);
-      toast.success('Login successful!');
-      navigate('/dashboard');
+      // Navigate based on whether user has completed profile setup
+      if (!result.user.jobRoles || result.user.jobRoles.length === 0) {
+        navigate('/skills'); // Go to skills selection if not completed
+      } else {
+        navigate('/dashboard'); // Go to dashboard if profile is complete
+      }
     } catch (error) {
-      toast.error('Login failed. Please try again.');
+      console.error('Login error:', error);
+      toast.error(error instanceof Error ? error.message : 'Login failed. Please try again.');
     }
   };
 

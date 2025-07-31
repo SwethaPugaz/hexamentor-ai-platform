@@ -84,15 +84,49 @@ const JobRoleSelection = () => {
     );
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedRoles.length === 0) {
       toast.error('Please select at least one job role');
       return;
     }
-    
-    updateUser({ jobRoles: selectedRoles });
-    toast.success('Job roles updated successfully!');
-    navigate('/dashboard');
+
+    try {
+      // Try to save job roles to backend
+      let isBackendAvailable = true;
+      
+      try {
+        const response = await fetch('http://localhost:5000/api/users/job-roles', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+          body: JSON.stringify({ jobRoles: selectedRoles }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.message || 'Failed to update job roles');
+        }
+
+        // Update local state with the returned user data
+        updateUser(result.user);
+        toast.success('Job roles updated successfully!');
+      } catch (backendError) {
+        console.warn('Backend not available, saving locally:', backendError);
+        isBackendAvailable = false;
+        
+        // Fallback to local storage update
+        updateUser({ jobRoles: selectedRoles });
+        toast.success(`Job roles updated!${isBackendAvailable ? '' : ' (Offline mode)'}`);
+      }
+      
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Job roles update error:', error);
+      toast.error('Failed to update job roles. Please try again.');
+    }
   };
 
   return (

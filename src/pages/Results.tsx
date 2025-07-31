@@ -39,28 +39,16 @@ import {
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-interface SkillAnalysis {
-  skill: string;
-  currentLevel: number;
-  requiredLevel: number;
-  gap: number;
-  category: 'technical' | 'analytical' | 'creative' | 'leadership';
-  improvement: string;
-}
 
-interface CompetencyMetric {
-  name: string;
-  score: number;
-  maxScore: number;
-  level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
-  description: string;
-}
 
 const Results = () => {
-  const { detailedResults, isCompleted, setResults, setSkillGaps } = useAssessmentStore();
+  const { detailedResults, isCompleted } = useAssessmentStore();
   const [loading, setLoading] = useState(true);
-  const [skillAnalysis, setSkillAnalysis] = useState<SkillAnalysis[]>([]);
-  const [competencyMetrics, setCompetencyMetrics] = useState<CompetencyMetric[]>([]);
+  // Dynamic state for difficulty breakdown
+  const [difficultyStats, setDifficultyStats] = useState<{ [key: string]: { total: number; correct: number; topics: string[] } }>({});
+  // Dynamic state for strengths and weaknesses
+  const [strengths, setStrengths] = useState<{ category: string; score: number }[]>([]);
+  const [weaknesses, setWeaknesses] = useState<{ category: string; score: number; topics: string[] }[]>([]);
 
   // Exit fullscreen and cleanup camera when entering results page
   useEffect(() => {
@@ -75,138 +63,61 @@ const Results = () => {
         }
       }
 
-      // Stop any camera streams
-      const streams = await navigator.mediaDevices.enumerateDevices();
-      streams.forEach(device => {
-        if (device.kind === 'videoinput') {
-          // Stop any active video tracks
-          navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-              stream.getTracks().forEach(track => track.stop());
-            })
-            .catch(() => {
-              // Camera might not be active, ignore error
-            });
-        }
-      });
+      // Stop the assessment camera stream if present
+      if ((window as any).__assessmentCameraStream) {
+        try {
+          (window as any).__assessmentCameraStream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+          (window as any).__assessmentCameraStream = null;
+          toast.success('Camera turned off after assessment');
+        } catch {}
+      }
     };
-
     cleanupSecurity();
   }, []);
 
   useEffect(() => {
-    const generateResults = async () => {
-      setLoading(true);
-      
-      // Simulate AI analysis
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock comprehensive skill analysis
-      const mockSkillAnalysis: SkillAnalysis[] = [
-        {
-          skill: 'Problem Solving',
-          currentLevel: 75,
-          requiredLevel: 90,
-          gap: 15,
-          category: 'analytical',
-          improvement: 'Practice algorithm challenges and case studies'
-        },
-        {
-          skill: 'Logical Thinking',
-          currentLevel: 82,
-          requiredLevel: 95,
-          gap: 13,
-          category: 'analytical',
-          improvement: 'Work on logical reasoning puzzles and formal logic'
-        },
-        {
-          skill: 'Technical Implementation',
-          currentLevel: 88,
-          requiredLevel: 92,
-          gap: 4,
-          category: 'technical',
-          improvement: 'Focus on advanced design patterns'
-        },
-        {
-          skill: 'Critical Analysis',
-          currentLevel: 70,
-          requiredLevel: 88,
-          gap: 18,
-          category: 'analytical',
-          improvement: 'Practice data interpretation and analytical thinking'
-        },
-        {
-          skill: 'Innovation & Creativity',
-          currentLevel: 65,
-          requiredLevel: 80,
-          gap: 15,
-          category: 'creative',
-          improvement: 'Engage in creative problem-solving exercises'
-        },
-        {
-          skill: 'System Design',
-          currentLevel: 78,
-          requiredLevel: 90,
-          gap: 12,
-          category: 'technical',
-          improvement: 'Study scalable architecture patterns'
-        }
-      ];
+    if (!isCompleted || !detailedResults) return;
+    setLoading(true);
 
-      const mockCompetencyMetrics: CompetencyMetric[] = [
-        {
-          name: 'Problem Solving',
-          score: 82,
-          maxScore: 100,
-          level: 'Advanced',
-          description: 'Strong analytical and problem-solving capabilities'
-        },
-        {
-          name: 'Logical Thinking',
-          score: 78,
-          maxScore: 100,
-          level: 'Advanced',
-          description: 'Good logical reasoning with room for improvement'
-        },
-        {
-          name: 'Technical Skills',
-          score: 85,
-          maxScore: 100,
-          level: 'Advanced',
-          description: 'Solid technical foundation with modern practices'
-        },
-        {
-          name: 'Critical Analysis',
-          score: 72,
-          maxScore: 100,
-          level: 'Intermediate',
-          description: 'Developing analytical thinking skills'
-        },
-        {
-          name: 'Innovation',
-          score: 68,
-          maxScore: 100,
-          level: 'Intermediate',
-          description: 'Growing creative problem-solving abilities'
-        }
-      ];
-
-      setSkillAnalysis(mockSkillAnalysis);
-      setCompetencyMetrics(mockCompetencyMetrics);
-      setResults(mockCompetencyMetrics.map(metric => ({
-        skillCategory: metric.name,
-        score: metric.score,
-        maxScore: metric.maxScore,
-        competencyLevel: metric.level
-      })));
-      setSkillGaps(mockSkillAnalysis.filter(skill => skill.gap > 10).map(skill => skill.skill));
-      setLoading(false);
-    };
-
-    if (isCompleted) {
-      generateResults();
+    // Use difficultyStats from detailedResults if available, else fallback to old logic
+    if (detailedResults.difficultyStats) {
+      setDifficultyStats(detailedResults.difficultyStats);
+    } else {
+      // Fallback: Compute from questions if not present (legacy)
+      const diffStats: { [key: string]: { total: number; correct: number; topics: string[] } } = {};
+      if (detailedResults.questions) {
+        detailedResults.questions.forEach((q: any) => {
+          const diff = q.difficulty || 'medium';
+          if (!diffStats[diff]) diffStats[diff] = { total: 0, correct: 0, topics: [] };
+          diffStats[diff].total++;
+          if (q.userAnswer !== undefined && parseInt(q.userAnswer) === q.correctAnswer) {
+            diffStats[diff].correct++;
+          } else if (q.userAnswer !== undefined && parseInt(q.userAnswer) !== q.correctAnswer) {
+            diffStats[diff].topics.push(q.concept || '');
+          }
+        });
+      }
+      setDifficultyStats(diffStats);
     }
-  }, [isCompleted, setResults, setSkillGaps]);
+
+    // Compute strengths and weaknesses from categoryScores
+    const strengthsArr: { category: string; score: number }[] = [];
+    const weaknessesArr: { category: string; score: number; topics: string[] }[] = [];
+    if (detailedResults.categoryScores) {
+      detailedResults.categoryScores.forEach((cat: any) => {
+        if (cat.score >= 70) {
+          strengthsArr.push({ category: cat.category, score: cat.score });
+        } else {
+          // Find topics for this category from skillGaps
+          const gap = detailedResults.skillGaps?.find((g: any) => g.skill === cat.category);
+          weaknessesArr.push({ category: cat.category, score: cat.score, topics: gap?.topics || [] });
+        }
+      });
+    }
+    setStrengths(strengthsArr);
+    setWeaknesses(weaknessesArr);
+    setLoading(false);
+  }, [isCompleted, detailedResults]);
 
   if (loading) {
     return (
@@ -217,8 +128,8 @@ const Results = () => {
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"
           />
-          <h3 className="text-xl font-semibold text-gray-900">AI is analyzing your results...</h3>
-          <p className="text-gray-600">Generating comprehensive skill gap analysis</p>
+          <h3 className="text-xl font-semibold text-gray-900">Analyzing your real assessment results...</h3>
+          <p className="text-gray-600">Generating dynamic skill gap and difficulty analysis</p>
         </motion.div>
       </div>
     );
@@ -242,21 +153,22 @@ const Results = () => {
     );
   }
 
-  const averageScore = competencyMetrics.reduce((sum, metric) => sum + metric.score, 0) / competencyMetrics.length;
+  const averageScore = detailedResults?.score || 0;
   const chartColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
-  
-  const radarData = competencyMetrics.map(metric => ({
-    subject: metric.name,
-    A: metric.score,
-    fullMark: 100
-  }));
 
-  const progressData = competencyMetrics.map((metric, index) => ({
-    name: metric.name,
-    current: metric.score,
+  // Radar and bar chart data from real results
+  const radarData = detailedResults?.categoryScores?.map((cat: any) => ({
+    subject: cat.category,
+    A: cat.score,
+    fullMark: 100
+  })) || [];
+
+  const progressData = detailedResults?.categoryScores?.map((cat: any) => ({
+    name: cat.category,
+    current: cat.score,
     target: 90,
-    gap: 90 - metric.score
-  }));
+    gap: 90 - cat.score
+  })) || [];
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -286,14 +198,71 @@ const Results = () => {
                   <div className="text-sm opacity-90">Questions Correct</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold">{skillAnalysis.filter(s => s.gap > 10).length}</div>
-                  <div className="text-sm opacity-90">Skill Gaps</div>
+                <div className="text-3xl font-bold">{weaknesses.length}</div>
+                <div className="text-sm opacity-90">Skill Gaps</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold">{competencyMetrics.filter(m => m.level === 'Advanced' || m.level === 'Expert').length}</div>
-                  <div className="text-sm opacity-90">Strong Areas</div>
+                <div className="text-3xl font-bold">{strengths.length}</div>
+                <div className="text-sm opacity-90">Strong Areas</div>
                 </div>
               </div>
+        {/* Competency Analysis (Dynamic) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-lg p-6 border mb-12"
+        >
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+            <Target className="w-6 h-6 mr-2 text-blue-500" />
+            Competency Analysis
+          </h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(detailedResults?.categoryScores || []).map((cat, idx) => {
+              let level = 'Beginner';
+              if (cat.score >= 85) level = 'Expert';
+              else if (cat.score >= 70) level = 'Advanced';
+              else if (cat.score >= 50) level = 'Intermediate';
+              return (
+                <div key={idx} className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-gray-900">{cat.category}</h3>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      level === 'Expert' ? 'bg-purple-100 text-purple-700' :
+                      level === 'Advanced' ? 'bg-blue-100 text-blue-700' :
+                      level === 'Intermediate' ? 'bg-green-100 text-green-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {level}
+                    </span>
+                  </div>
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Score</span>
+                      <span>{cat.score}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${cat.score}%` }}
+                        transition={{ duration: 1, delay: idx * 0.1 }}
+                        className="bg-gradient-to-r from-blue-500 to-teal-500 h-3 rounded-full"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {level === 'Expert' && 'Outstanding mastery in this area.'}
+                    {level === 'Advanced' && 'Strong performance, keep it up!'}
+                    {level === 'Intermediate' && 'Good foundation, but more practice recommended.'}
+                    {level === 'Beginner' && 'Needs significant improvement.'}
+                  </p>
+                </div>
+              );
+            })}
+            {(detailedResults?.categoryScores?.length === 0 || !detailedResults?.categoryScores) && (
+              <div className="text-gray-500 col-span-full">No competency data available.</div>
+            )}
+          </div>
+        </motion.div>
 
               {/* Assessment Summary */}
               {detailedResults && (
@@ -360,14 +329,14 @@ const Results = () => {
             <ResponsiveContainer width="100%" height={250}>
               <RechartsPieChart>
                 <Pie
-                  data={competencyMetrics}
+                  data={detailedResults?.categoryScores?.map((cat: any) => ({ name: cat.category, score: cat.score })) || []}
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
                   dataKey="score"
                   label={({ name, score }) => `${name}: ${score}%`}
                 >
-                  {competencyMetrics.map((entry, index) => (
+                  {(detailedResults?.categoryScores || []).map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                   ))}
                 </Pie>
@@ -397,7 +366,7 @@ const Results = () => {
           </ResponsiveContainer>
         </motion.div>
 
-        {/* Detailed Analysis */}
+        {/* Detailed Analysis - Dynamic Strengths and Weaknesses */}
         <div className="grid lg:grid-cols-2 gap-8 mb-12">
           {/* Strengths */}
           <motion.div
@@ -410,22 +379,23 @@ const Results = () => {
               Your Strengths
             </h3>
             <div className="space-y-4">
-              {skillAnalysis.filter(skill => skill.gap <= 10).map((skill, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+              {strengths.length === 0 && <div className="text-gray-500">No strong areas detected.</div>}
+              {strengths.map((s, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
                   <div>
-                    <h4 className="font-semibold text-green-800">{skill.skill}</h4>
-                    <p className="text-sm text-green-600">Strong performance - {skill.currentLevel}%</p>
+                    <h4 className="font-semibold text-green-800">{s.category}</h4>
+                    <p className="text-sm text-green-600">Score: {s.score}%</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Star className="w-5 h-5 text-green-500" />
-                    <span className="font-bold text-green-700">{skill.currentLevel}%</span>
+                    <span className="font-bold text-green-700">{s.score}%</span>
                   </div>
                 </div>
               ))}
             </div>
           </motion.div>
 
-          {/* Improvement Areas */}
+          {/* Weaknesses/Skill Gaps */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -436,70 +406,46 @@ const Results = () => {
               Areas for Improvement
             </h3>
             <div className="space-y-4">
-              {skillAnalysis.filter(skill => skill.gap > 10).map((skill, index) => (
-                <div key={index} className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+              {weaknesses.length === 0 && <div className="text-gray-500">No major skill gaps detected.</div>}
+              {weaknesses.map((w, idx) => (
+                <div key={idx} className="p-4 bg-orange-50 rounded-lg border border-orange-200">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-orange-800">{skill.skill}</h4>
-                    <span className="text-sm font-medium text-orange-600">Gap: {skill.gap}%</span>
+                    <h4 className="font-semibold text-orange-800">{w.category}</h4>
+                    <span className="text-sm font-medium text-orange-600">Score: {w.score}%</span>
                   </div>
-                  <div className="w-full bg-orange-200 rounded-full h-2 mb-2">
-                    <div 
-                      className="bg-orange-500 h-2 rounded-full"
-                      style={{ width: `${skill.currentLevel}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm text-orange-700">{skill.improvement}</p>
+                  {w.topics && w.topics.length > 0 && (
+                    <div className="text-xs text-orange-700 mb-1">Topics to review: {w.topics.join(', ')}</div>
+                  )}
                 </div>
               ))}
             </div>
           </motion.div>
         </div>
 
-        {/* Competency Breakdown */}
+        {/* Difficulty Breakdown */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-lg p-6 border mb-12"
         >
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-            <Target className="w-6 h-6 mr-2 text-blue-500" />
-            Detailed Competency Analysis
+            <BarChart3 className="w-6 h-6 mr-2 text-blue-500" />
+            Performance by Difficulty Level
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {competencyMetrics.map((metric, index) => (
-              <div key={index} className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-gray-900">{metric.name}</h3>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    metric.level === 'Expert' ? 'bg-purple-100 text-purple-700' :
-                    metric.level === 'Advanced' ? 'bg-blue-100 text-blue-700' :
-                    metric.level === 'Intermediate' ? 'bg-green-100 text-green-700' :
-                    'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {metric.level}
-                  </span>
-                </div>
-                
-                <div className="mb-4">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Score</span>
-                    <span>{metric.score}/{metric.maxScore}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(metric.score / metric.maxScore) * 100}%` }}
-                      transition={{ duration: 1, delay: index * 0.1 }}
-                      className="bg-gradient-to-r from-blue-500 to-teal-500 h-3 rounded-full"
-                    />
-                  </div>
-                </div>
-                
-                <p className="text-sm text-gray-600">{metric.description}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {['easy','medium','hard'].map(level => (
+              <div key={level} className="p-4 bg-gray-50 rounded-lg border">
+                <h4 className="font-semibold capitalize mb-2">{level}</h4>
+                <div>Correct: {difficultyStats[level]?.correct || 0} / {difficultyStats[level]?.total || 0}</div>
+                {difficultyStats[level]?.topics?.length > 0 && (
+                  <div className="text-xs text-red-600 mt-1">Topics missed: {difficultyStats[level].topics.join(', ')}</div>
+                )}
               </div>
             ))}
           </div>
         </motion.div>
+
+
 
         {/* Action Items */}
         <motion.div
@@ -512,21 +458,39 @@ const Results = () => {
             AI-Recommended Next Steps
           </h2>
           <p className="text-lg opacity-90 mb-6">
-            Based on your assessment, our AI recommends personalized courses to bridge your skill gaps
+            Based on your assessment, here are personalized courses to bridge your specific skill gaps:
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              to="/courses"
-              className="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all flex items-center justify-center space-x-2"
-            >
-              <BookOpen className="w-5 h-5" />
-              <span>View Recommended Courses</span>
-            </Link>
+          <div className="flex flex-col gap-4 items-center">
+            {/* Show recommended courses for each skill gap */}
+            {detailedResults?.skillGaps && detailedResults.skillGaps.length > 0 ? (
+              detailedResults.skillGaps.map((gap, idx) => (
+                <div key={gap.skill} className="bg-white text-purple-700 rounded-lg shadow p-4 w-full max-w-xl flex flex-col sm:flex-row items-center justify-between border border-purple-200 mb-2">
+                  <div className="flex items-center space-x-3">
+                    <BookOpen className="w-6 h-6 text-purple-500" />
+                    <div>
+                      <div className="font-bold text-lg">{gap.skill}</div>
+                      {gap.topics && gap.topics.length > 0 && (
+                        <div className="text-xs text-purple-400">Topics: {gap.topics.join(', ')}</div>
+                      )}
+                    </div>
+                  </div>
+                  <Link
+                    to={`/courses?skill=${encodeURIComponent(gap.skill)}`}
+                    className="mt-2 sm:mt-0 bg-purple-100 text-purple-700 px-4 py-2 rounded font-semibold hover:bg-purple-200 transition-all flex items-center space-x-2"
+                  >
+                    <span>View Courses</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="text-white opacity-80">No major skill gaps detected. Explore more courses to upskill!</div>
+            )}
             <button
               onClick={() => {
                 toast.success('Assessment results downloaded!');
               }}
-              className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-all flex items-center justify-center space-x-2"
+              className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-all flex items-center justify-center space-x-2 mt-4"
             >
               <Award className="w-5 h-5" />
               <span>Download Report</span>

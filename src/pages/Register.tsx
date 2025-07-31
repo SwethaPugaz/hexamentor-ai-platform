@@ -24,23 +24,37 @@ const Register = () => {
 
   const onSubmit = async (data: RegisterForm) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newUser = {
-        id: Date.now().toString(),
-        email: data.email,
-        name: data.name,
-        role: 'employee' as const,
-        skills: [],
-        jobRoles: []
-      };
-      
-      login(newUser);
+      // Call backend API for registration
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Registration failed');
+      }
+
+      // Store the authentication token
+      if (result.token) {
+        localStorage.setItem('token', result.token);
+      }
+
+      // Login with the newly created user
+      login(result.user);
       toast.success('Registration successful!');
-      navigate('/skills');
+      navigate('/skills'); // Always go to skills for new users
     } catch (error) {
-      toast.error('Registration failed. Please try again.');
+      console.error('Registration error:', error);
+      toast.error(error instanceof Error ? error.message : 'Registration failed. Please try again.');
     }
   };
 
